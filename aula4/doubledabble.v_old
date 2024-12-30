@@ -1,0 +1,150 @@
+module double_dabble(clk, rst, start, binary, done, bcd);
+	parameter W = 18;
+	input clk, rst, start;
+	input [W - 1: 0 ] binary ;
+	output done;
+	output [4*$ceil(W/3.0) - 1:0] bcd;
+	// Seu codigo
+	wire bin_eq_zero;
+	wire en_bcd, en_bin;
+	wire load_bcd, load_bin;
+
+	double_dabble_fd fd(
+		.bin(binary),
+		.clk(clk),
+		.rst(rst),
+		.en_bcd(en_bcd),
+		.en_bin(en_bin),
+		.load_bcd(load_bcd),
+		.load_bin(load_bin),
+		.bin_eq_zero(bin_eq_zero)
+	);
+
+	double_dabble_uc uc(
+		.clk(clk),
+		.rst(rst),
+		.start(start),
+		.bin_eq_zero(bin_eq_zero),
+		.en_bcd(en_bcd),
+		.en_bin(en_bin),
+		.load_bcd(load_bcd),
+		.load_bin(load_bin)
+	);
+endmodule
+
+module double_dabble_uc(
+	input clk, rst, start, bin_eq_zero,
+	input en_bcd, en_bin, load_bcd, load_bin,
+	output done
+);
+	localparam [1:0] INIT  = 2'b00;
+	localparam [1:0] SHIFT = 2'b01;
+	localparam [1:0] SUM   = 2'b10;
+	localparam [1:0] DONE  = 2'b11;
+
+	reg [2:0] state;
+	reg [2:0] next_state;	
+	reg [4:0] out;
+
+	always @(posedge clk) begin
+		if (rst) state = 0;
+		state <= next_state;
+	end
+
+	always @(state) begin
+		case(state)
+			INIT: if (start)	   next_state = SHIFT;
+				  else			   next_state = INIT;
+			SHIFT:				   next_state = SUM;
+			SUM:  if (bin_eq_zero) next_state = DONE;
+				  else			   next_state = SHIFT;
+			DONE: if (start)	   next_state = DONE;
+				  else			   next_state = INIT;
+			default				   next_state = INIT;
+		endcase
+	end
+
+	always @(state) begin
+		case(state)
+			INIT:	out = 5'b01_01_0;
+			SHIFT:	out = 5'b11_00_0;
+			SUM:	out = 5'b10_10_0;
+			DONE:	out = 5'b00_00_1;
+		endcase
+	end
+	assign {en_bcd, en_bin, load_bcd, load_bin, done} = out;
+endmodule	
+
+module double_dabble_fd
+    #(parameter W = 18, N = (4*$ceil(W/3.0)))    
+	(
+		input [W-1:0] bin,
+		input clk, rst,
+		input en_bcd, en_bin,
+		input load_bcd, load_bin,
+		output [N-1:0] out_Rbcd,
+		output [W-1:0] out_Rbin,
+		output bin_eq_zero
+	);
+	wire msb_Rbin;
+	wire [N-1:0] in_Rbcd;
+
+	assign bin_eq_zero = (out_Rbin == 0);
+
+	shiftr_reg #(N) Rbcd(
+		.clk(clk),
+		.rst(rst),
+		.en(en_bcd),
+		.load(load_bcd),
+		.si(msb_Rbin),
+		.d(in_Rbcd),
+		.q(out_Rbcd)
+	);
+
+	shiftr_reg #(W) Rbin(
+		.clk(clk),
+		.rst(rst),
+		.en(en_bin),
+		.load(load_bin),
+		.si(1'bz),
+		.d(bin),
+		.q(out_Rbin)
+	);
+
+	genvar gen;
+	generate
+		for (gen = 0; gen < N; gen = gen + 4) begin
+			add3or0 add(
+				.bcd_i(out_Rbcd[gen + 3:gen]),
+				.bcd_o(in_Rbcd[gen + 3:gen])
+			);
+		end
+	endgenerate
+endmodule
+
+module add3or0(bcd_i, bcd_o);
+	input [3:0] bcd_i;
+	output [3:0] bcd_o;
+	assign bcd_o = (bcd_i < 5) ? bcd_i
+							   : bcd_i + 4'b0011;
+endmodule
+
+module shiftr_reg
+    #(parameter WIDTH=8)
+    (
+        input  clk, rst, en, load, si, 
+        input  [WIDTH-1:0] d, 
+        output [WIDTH-1:0] q);
+	reg [WIDTH-1:0] sreg;
+	always @(posedge clk or posedge rst)
+	begin
+		if (rst)
+			sreg = 0;        
+		else if (en)
+			if (load) 
+				sreg = d;
+			else 
+				sreg = (sreg << 1) + si;
+	end
+	assign q = sreg;
+endmodule

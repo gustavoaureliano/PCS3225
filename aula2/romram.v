@@ -28,15 +28,11 @@ module romram1(
         RW = 0; #2;
         done = 1; #2;
     end
-
-
-
 endmodule
 
 module romram2(output reg [15:0] soma,
                output reg comp,
                output reg done);
-   
     reg [15:0] aux_sum;
     integer i;
     reg [1:0] addr_ram = 2'b1;
@@ -68,7 +64,52 @@ module romram2(output reg [15:0] soma,
         soma = aux_sum;
         #4;
     end
+endmodule
 
+module romram3(
+    output [15:0] out,
+    output reg done
+);
+    wire [15:0] outrom;
+    wire [15:0] outram;
+    reg [15:0] in;
+    reg RW;
+	reg [3:0] addrrom;
+	reg [3:0] addrram;
+	integer i;
+
+    rom_16 rom(
+        .addr(addrrom),
+        .out(outrom),
+        .CS(1'b0)
+    );
+
+	generate
+	for(gen=1; gen < 4 ; gen = gen+1) begin
+		ram_4 ram(
+			.out(outram),
+			.in(in),
+			.addr(addrram),
+			.RW(RW),
+			.CS(1'b0)
+		);
+	end
+	endgenerate
+
+    ram_4 ram2(
+        .out(out),
+        .in(in),
+        .addr(2'h3),
+        .RW(RW),
+        .CS(1'b0)
+    );
+
+	initial begin
+		for (i = 0; i < 16; i++) begin
+			addrrom = i;#2
+			$display("%d", outrom);
+		end
+	end
 endmodule
 
 module ram_4 ( out , in , addr , RW , CS ) ;
@@ -78,20 +119,17 @@ module ram_4 ( out , in , addr , RW , CS ) ;
     output reg [ 15 : 0 ] out ;
     reg [ 15 : 0 ] data [ 3 : 0 ] ;
     integer i ;
-    initial begin
-        for ( i = 0 ; i < 4 ; i = i + 1 ) begin
+    initial
+		for ( i = 0 ; i < 4 ; i = i + 1 )
             data [ i ] = 16'b0 ;
-        end
-    end
-    always @ ( addr , CS , RW ) begin
-        if ( RW == 1'b0 )
-        out = data [ addr ] ;
+    always @ ( addr , CS , RW )
+		if ( RW == 1'b0 )
+			out = data [ addr ] ;
         else
-        if ( RW == 1'b1 )
-        data [ addr ] = in ;
-        else
-        out = 16'bz ;
-    end
+			if ( RW == 1'b1 )
+				data [ addr ] = in ;
+			else
+				out = 16'bz ;
 endmodule
 
 module rom_16 ( out , addr , CS ) ;
@@ -102,11 +140,10 @@ module rom_16 ( out , addr , CS ) ;
     integer i ;
     initial
     begin
-        for ( i = 0 ; i < 15 ; i = i + 1 ) begin
+        for ( i = 0 ; i < 15 ; i = i + 1 )
             data [ i ] = i [ 15 : 0 ] ;
-            data [ 15 ] = 16'h69 ;
-        end
+		data [ 15 ] = 16'h69 ;
     end
-    always @ ( addr , CS )
-    out = data [ addr ] ;
+	always @ ( addr , CS )
+		out = data [ addr ] ;
 endmodule

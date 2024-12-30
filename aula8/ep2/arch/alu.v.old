@@ -1,0 +1,39 @@
+module alu
+	#(parameter W = 32)
+	(
+		input [3:0] ALUctl,
+		input [W-1:0] A, B,
+		output [W-0:0] ALUout,
+		output Overflow, Zero
+	);
+
+	localparam AND 		= 4'b0000;
+	localparam OR 		= 4'b0001;
+	localparam ADD 		= 4'b0010;
+	localparam SUB 		= 4'b0110;
+	localparam LESSTHAN = 4'b0111;
+	localparam NOR 		= 4'b1100;
+
+	reg [W:0] resultado;
+
+	assign ALUout = resultado[W-0:0];
+	assign Overflow = resultado[W];
+	assign Zero = (resultado == 0) ? 1'b1 : 1'b0;
+
+	always @(*) begin
+		case(ALUctl)
+			AND:
+					resultado = A & B;
+			OR:
+					resultado = A | B;
+			ADD:
+					resultado = A + B;
+			SUB:
+					resultado = A - B;
+			LESSTHAN:
+					resultado = A < B;
+			NOR:
+					resultado = A ~| B;
+		endcase
+	end
+endmodule

@@ -1,0 +1,20 @@
+MemWrite: 
+	0 -> read   
+	1 -> SB   
+	2 -> SH   
+	3 -> SW
+
+PCsrc: 
+	0 -> PC+4   
+	1 -> branch   
+	2 -> JALR
+
+MemtoReg: 
+	0 -> ALU   
+	1 -> JAL/JALR   
+	2 -> LUI   
+	3 -> AUIPC   
+	4 -> LB   
+	5 -> LH  
+	6 -> LW   
+	7 -> SLT/SLTI

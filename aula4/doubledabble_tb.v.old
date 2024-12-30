@@ -1,0 +1,36 @@
+module doubledabble_tb #(parameter W=18);
+	reg clk, rst, start;
+	reg [W - 1:0] numBin;
+	wire done;
+	wire [W - 1:0] binary;
+	wire [4*$ceil(W/3.0) - 1:0] bcd;
+
+	double_dabble #(W) u1(
+		.clk(clk),
+		.rst(rst),
+		.start(start),
+		.binary(binary),
+		.done(done),
+		.bcd(bcd)
+	);
+	assign binary = numBin;
+
+	initial begin
+        $dumpfile ("doubledabble_tb.vcd");
+        $dumpvars(0, doubledabble_tb);
+		start = 1'b0; rst = 1'b1; #2;
+		rst = 0;
+		numBin = 251032;
+		start = 1;
+		#75;
+		start = 1'b0;
+		#1;
+		$finish;
+	end
+
+    // generate the clock
+    initial begin
+        clk = 1'b0;
+	    forever #1 clk = ~clk;
+    end
+endmodule
